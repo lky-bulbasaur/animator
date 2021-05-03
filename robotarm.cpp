@@ -1,3 +1,4 @@
+/*
 // The sample robotarm model.  You should build a file
 // very similar to this for when you make your model.
 #pragma warning (disable : 4305)
@@ -67,7 +68,7 @@ ModelerView* createRobotArm(int x, int y, int w, int h, char *label)
 // method of ModelerView to draw out RobotArm
 void RobotArm::draw()
 {
-	/* pick up the slider values */
+	// pick up the slider values
 
 	float theta = VAL( BASE_ROTATION );
 	float phi = VAL( LOWER_TILT );
@@ -108,7 +109,7 @@ void RobotArm::draw()
 	glRotatef( cr, 0.0, 0.0, 1.0 );
 	claw(1.0);
 
-	//*** DON'T FORGET TO PUT THIS IN YOUR OWN CODE **/
+	//*** DON'T FORGET TO PUT THIS IN YOUR OWN CODE
 	endDraw();
 }
 
@@ -289,3 +290,4 @@ int main()
 
     return ModelerApplication::Instance()->Run();
 }
+*/
