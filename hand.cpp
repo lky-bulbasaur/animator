@@ -1,3 +1,4 @@
+
 // The sample model.  You should build a file
 // very similar to this for when you make your model.
 #include "modelerview.h"
@@ -322,7 +323,7 @@ void HandModel::draw()
 	rotateVertices(reflect * VAL(THUMB_ROOT_YROTATE) + thumb_tipYrootY_angle, 0, 1, 0, &thumbRoot);
 	rotateVertices(reflect * VAL(THUMB_ROOT_ZROTATE), 0, 0, 1, &thumbRoot);
 	translateVertices(reflect * -2.5, 4, 0, &thumbRoot);
-
+	
 	// =====================================================================================================================
 	//	INDEX FINGER
 	// =====================================================================================================================
