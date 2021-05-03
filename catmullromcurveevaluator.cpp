@@ -44,6 +44,8 @@ void CatmullromCurveEvaluator::evaluateCurve(const std::vector<Point>& ptvCtrlPt
 		}
 		// By repeating the end point once, we can force the first interpolated Catmull-Rom point to be exactly the first control point
 		// i.e. The end points are defined by 2 points with the same coordinates
+		// The reason only 2 points are needed instead of 3 is that Catmull-rom interpolates the next ONE point,
+		// while B-spline interpolates the next TWO points
 		ctrlPts.insert(ctrlPts.begin(), Point(0, ctrlPts[0].y));
 		ctrlPts.push_back(Point(fAniLength, ctrlPts[ctrlPts.size() - 1].y));
 
