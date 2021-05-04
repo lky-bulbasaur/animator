@@ -17,8 +17,15 @@
 #define __PARTICLE_SYSTEM_H__
 
 #include "vec.h"
+#include <vector>
+#include <map>
 
-
+struct Particle {
+	Vec3f x;
+	Vec3f v;
+	Vec3f f;
+	float m;
+};
 
 class ParticleSystem {
 
@@ -72,11 +79,24 @@ public:
 	bool isDirty() { return dirty; }
 	void setDirty(bool d) { dirty = d; }
 
+	void setIndexTipCoor(Vec3f c);
+
 
 
 protected:
-	
+	// Where the particles spawn
+	Vec3f indexTipCoor;
 
+	// A vector with each element storing a snapshot of the current particle states
+	std::vector<
+		std::pair<
+			float,								// Time t is used as the key to index the particle states at time t
+			std::vector<Particle>*	// Vector that stores all particle states at a given time t
+		>										// [0]: Position x
+												// [1]: Velocity v
+												// [2]: Force f
+												// [3]: Mass m (only the first element of this Vec3f is used to store the mass m, the rest are 0)
+	>* bakedStates;
 
 	/** Some baking-related state **/
 	float bake_fps;						// frame rate at which simulation was baked
@@ -84,11 +104,14 @@ protected:
 										// These 2 variables are used by the UI for
 										// updating the grey indicator 
 	float bake_end_time;				// time at which baking ended
+	float delta_t;
 
 	/** General state variables **/
 	bool simulate;						// flag for simulation mode
 	bool dirty;							// flag for updating ui (don't worry about this)
 
+	// For checking if there is a baked state indexed by time t
+	const float TIME_EPSILON = 0.1;
 };
 
 

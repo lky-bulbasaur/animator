@@ -8,10 +8,11 @@
 #include <vector>
 
 #include "ThreadPool.h"
-#include "vec.h"
+// #include "vec.h"
 #include "mat.h"
 #include "marchingcubesconst.h"
 #include "bitmap.h"
+#include "particleSystem.h"
 
 #include <iostream>
 #include "modelerglobals.h"
@@ -96,6 +97,30 @@ private:
 	int textureWidth, textureHeight;
 	GLuint textureID;
 };
+
+// Given function to get OpenGL's current modelview matrix
+Mat4f getModelViewMatrix() {
+	GLfloat m[16];
+	glGetFloatv(GL_MODELVIEW_MATRIX, m);
+	Mat4f matMV(m[0], m[1], m[2], m[3],
+		m[4], m[5], m[6], m[7],
+		m[8], m[9], m[10], m[11],
+		m[12], m[13], m[14], m[15]);
+	return matMV.transpose(); // because the matrix GL returns is column major
+}
+
+// Helper function to spawn particles
+// Pseudocode given on project website
+void spawnParticles(Mat4f cameraTransform) {
+
+	Mat4f curModelTransform = getModelViewMatrix();
+	Mat4f worldTransform = cameraTransform.inverse() * curModelTransform;
+	Vec4f worldPt = worldTransform * Vec4f(0, 1, 0, 1);
+
+	// Updates particle system variables
+	ParticleSystem* ps = ModelerApplication::Instance()->GetParticleSystem();
+	ps->setIndexTipCoor(Vec3f(worldPt[0], worldPt[1], worldPt[2]));
+}
 
 // We need to make a creator function, mostly because of
 // nasty API stuff that we'd rather stay away from.
@@ -255,6 +280,7 @@ void HandModel::draw()
 	// matrix stuff.  Unless you want to fudge directly with the 
 	// projection matrix, don't bother with this ...
 	ModelerView::draw();
+	Mat4f cameraTransform = getModelViewMatrix();
 
 	// @HERMAN I commeneted this out because idk how to fix it
 	/*
@@ -289,6 +315,14 @@ void HandModel::draw()
 
 	clearVerticesList();
 
+	glPushMatrix();
+
+
+	glTranslated(VAL(XPOS), VAL(YPOS), VAL(ZPOS));
+	glRotated(VAL(XROTATE), 1, 0, 0);
+	glRotated(VAL(YROTATE), 0, 1, 0);
+	glRotated(VAL(ZROTATE), 0, 0, 1);
+
 	// Define the hand metaball model with vertices
 	// Also handle transformations here
 	// Also since I'm dumb, I brute-forced the way non-graphic vectors are transformed
@@ -298,196 +332,298 @@ void HandModel::draw()
 	// =====================================================================================================================
 	//	THUMB
 	// =====================================================================================================================
-		// Thumb tip
+	// Thumb tip
 	vector<Vec3f> thumbTip;
-	thumbTip.push_back(Vec3f(0, 0, 0));
-	thumbTip.push_back(Vec3f(0, 0.5, 0));
-	thumbTip.push_back(Vec3f(0, 1, 0));
+	glPushMatrix();
+		thumbTip.push_back(Vec3f(0, 0, 0));
+		thumbTip.push_back(Vec3f(0, 0.5, 0));
+		thumbTip.push_back(Vec3f(0, 1, 0));
 
-	// Move self only
-	rotateVertices(VAL(THUMB_TIP_XROTATE) + thumb_tipXrootX_angle, 1, 0, 0, &thumbTip);
-	rotateVertices(reflect * VAL(THUMB_TIP_YROTATE) + thumb_tipYrootY_angle, 0, 1, 0, &thumbTip);
-	rotateVertices(reflect * VAL(THUMB_TIP_ZROTATE), 0, 0, 1, &thumbTip);
-	translateVertices(0, 1.4, 0, &thumbTip);
+		// Move self only
+		rotateVertices(VAL(THUMB_TIP_XROTATE) + thumb_tipXrootX_angle, 1, 0, 0, &thumbTip);
+		rotateVertices(reflect * VAL(THUMB_TIP_YROTATE) + thumb_tipYrootY_angle, 0, 1, 0, &thumbTip);
+		rotateVertices(reflect * VAL(THUMB_TIP_ZROTATE), 0, 0, 1, &thumbTip);
+		translateVertices(0, 1.4, 0, &thumbTip);
 
 	// Thumb root
 	vector<Vec3f> thumbRoot;
-	thumbRoot.push_back(Vec3f(0, 0, 0));
-	thumbRoot.push_back(Vec3f(0, 0.5, 0));
-	thumbRoot.push_back(Vec3f(0, 1, 0));
+		thumbRoot.push_back(Vec3f(0, 0, 0));
+		thumbRoot.push_back(Vec3f(0, 0.5, 0));
+		thumbRoot.push_back(Vec3f(0, 1, 0));
 
-	// Also move children
-	for (int i = 0; i < thumbTip.size(); ++i)	thumbRoot.push_back(thumbTip.at(i));
-	rotateVertices(reflect * 45, 0, 0, 1, &thumbRoot);
-	rotateVertices(VAL(THUMB_ROOT_XROTATE) + thumb_tipXrootX_angle, 1, 0, 0, &thumbRoot);
-	rotateVertices(reflect * VAL(THUMB_ROOT_YROTATE) + thumb_tipYrootY_angle, 0, 1, 0, &thumbRoot);
-	rotateVertices(reflect * VAL(THUMB_ROOT_ZROTATE), 0, 0, 1, &thumbRoot);
-	translateVertices(reflect * -2.5, 4, 0, &thumbRoot);
+		// Also move children
+		for (int i = 0; i < thumbTip.size(); ++i)	thumbRoot.push_back(thumbTip.at(i));
+		rotateVertices(reflect * 45, 0, 0, 1, &thumbRoot);
+		rotateVertices(VAL(THUMB_ROOT_XROTATE) + thumb_tipXrootX_angle, 1, 0, 0, &thumbRoot);
+		rotateVertices(reflect * VAL(THUMB_ROOT_YROTATE) + thumb_tipYrootY_angle, 0, 1, 0, &thumbRoot);
+		rotateVertices(reflect * VAL(THUMB_ROOT_ZROTATE), 0, 0, 1, &thumbRoot);
+		translateVertices(reflect * -2.5, 4, 0, &thumbRoot);
+
+		// Mimick the transformations in OpenGL's modelview matrix to add support for particle system
+		glTranslatef(reflect * -2.5, 4, 0);
+		glRotatef(reflect * VAL(THUMB_ROOT_ZROTATE), 0, 0, 1);
+		glRotatef(reflect * VAL(THUMB_ROOT_YROTATE) + thumb_tipYrootY_angle, 0, 1, 0);
+		glRotatef(VAL(THUMB_ROOT_XROTATE) + thumb_tipXrootX_angle, 1, 0, 0);
+		glRotatef(reflect * 45, 0, 0, 1);
+
+		glTranslatef(0, 1.4, 0);
+		glRotatef(reflect * VAL(THUMB_TIP_ZROTATE), 0, 0, 1);
+		glRotatef(reflect * VAL(THUMB_TIP_YROTATE), 0, 1, 0);
+		glRotatef(VAL(THUMB_TIP_XROTATE) + thumb_tipXrootX_angle, 1, 0, 0);
+
+		// Place spawnParticle() here if needed
+	glPopMatrix();
 	
 	// =====================================================================================================================
 	//	INDEX FINGER
 	// =====================================================================================================================
-		// Index tip
+	// Index tip
 	vector<Vec3f> indexTip;
-	indexTip.push_back(Vec3f(0, 0, 0));
-	indexTip.push_back(Vec3f(0, 0.5, 0));
-	indexTip.push_back(Vec3f(0, 1, 0));
+	glPushMatrix();
+		indexTip.push_back(Vec3f(0, 0, 0));
+		indexTip.push_back(Vec3f(0, 0.5, 0));
+		indexTip.push_back(Vec3f(0, 1, 0));
 
-	// Move self only
-	rotateVertices(VAL(INDEX_TIP_XROTATE) + index_tipXmidXrootX_angle, 1, 0, 0, &indexTip);
-	rotateVertices(reflect * VAL(INDEX_TIP_YROTATE), 0, 1, 0, &indexTip);
-	rotateVertices(reflect * VAL(INDEX_TIP_ZROTATE), 0, 0, 1, &indexTip);
-	translateVertices(0, 1.4, 0, &indexTip);
+		// Move self only
+		rotateVertices(VAL(INDEX_TIP_XROTATE) + index_tipXmidXrootX_angle, 1, 0, 0, &indexTip);
+		rotateVertices(reflect * VAL(INDEX_TIP_YROTATE), 0, 1, 0, &indexTip);
+		rotateVertices(reflect * VAL(INDEX_TIP_ZROTATE), 0, 0, 1, &indexTip);
+		translateVertices(0, 1.4, 0, &indexTip);
 
 	// Index mid
 	vector<Vec3f> indexMid;
-	indexMid.push_back(Vec3f(0, 0, 0));
-	indexMid.push_back(Vec3f(0, 0.5, 0));
-	indexMid.push_back(Vec3f(0, 1, 0));
+		indexMid.push_back(Vec3f(0, 0, 0));
+		indexMid.push_back(Vec3f(0, 0.5, 0));
+		indexMid.push_back(Vec3f(0, 1, 0));
 
-	// Also move children
-	for (int i = 0; i < indexTip.size(); ++i)	indexMid.push_back(indexTip.at(i));
-	rotateVertices(VAL(INDEX_MID_XROTATE) + index_tipXmidXrootX_angle, 1, 0, 0, &indexMid);
-	rotateVertices(reflect * VAL(INDEX_MID_YROTATE), 0, 1, 0, &indexMid);
-	rotateVertices(reflect * VAL(INDEX_MID_ZROTATE), 0, 0, 1, &indexMid);
-	translateVertices(0, 1.4, 0, &indexMid);
+		// Also move children
+		for (int i = 0; i < indexTip.size(); ++i)	indexMid.push_back(indexTip.at(i));
+		rotateVertices(VAL(INDEX_MID_XROTATE) + index_tipXmidXrootX_angle, 1, 0, 0, &indexMid);
+		rotateVertices(reflect * VAL(INDEX_MID_YROTATE), 0, 1, 0, &indexMid);
+		rotateVertices(reflect * VAL(INDEX_MID_ZROTATE), 0, 0, 1, &indexMid);
+		translateVertices(0, 1.4, 0, &indexMid);
 
 	// Index root
 	vector<Vec3f> indexRoot;
-	indexRoot.push_back(Vec3f(0, 0, 0));
-	indexRoot.push_back(Vec3f(0, 0.5, 0));
-	indexRoot.push_back(Vec3f(0, 1, 0));
+		indexRoot.push_back(Vec3f(0, 0, 0));
+		indexRoot.push_back(Vec3f(0, 0.5, 0));
+		indexRoot.push_back(Vec3f(0, 1, 0));
 
-	// Also move children
-	for (int i = 0; i < indexMid.size(); ++i)	indexRoot.push_back(indexMid.at(i));
-	rotateVertices(reflect * 22.5, 0, 0, 1, &indexRoot);
-	rotateVertices(VAL(INDEX_ROOT_XROTATE) + index_tipXmidXrootX_angle, 1, 0, 0, &indexRoot);
-	rotateVertices(reflect * VAL(INDEX_ROOT_YROTATE), 0, 1, 0, &indexRoot);
-	rotateVertices(reflect * VAL(INDEX_ROOT_ZROTATE), 0, 0, 1, &indexRoot);
-	translateVertices(reflect * -1.25, 6, 0, &indexRoot);
+		// Also move children
+		for (int i = 0; i < indexMid.size(); ++i)	indexRoot.push_back(indexMid.at(i));
+		rotateVertices(reflect * 22.5, 0, 0, 1, &indexRoot);
+		rotateVertices(VAL(INDEX_ROOT_XROTATE) + index_tipXmidXrootX_angle, 1, 0, 0, &indexRoot);
+		rotateVertices(reflect * VAL(INDEX_ROOT_YROTATE), 0, 1, 0, &indexRoot);
+		rotateVertices(reflect * VAL(INDEX_ROOT_ZROTATE), 0, 0, 1, &indexRoot);
+		translateVertices(reflect * -1.25, 6, 0, &indexRoot);
+
+		// Mimick the transformations in OpenGL's modelview matrix to add support for particle system
+		glTranslatef(reflect * -1.25, 6, 0);
+		glRotatef(reflect * VAL(INDEX_ROOT_ZROTATE), 0, 0, 1);
+		glRotatef(reflect * VAL(INDEX_ROOT_YROTATE), 0, 1, 0);
+		glRotatef(VAL(INDEX_ROOT_XROTATE) + index_tipXmidXrootX_angle, 1, 0, 0);
+		glRotatef(reflect * 22.5, 0, 0, 1);
+
+		glTranslatef(0, 1.4, 0);
+		glRotatef(reflect * VAL(INDEX_MID_ZROTATE), 0, 0, 1);
+		glRotatef(reflect * VAL(INDEX_MID_YROTATE), 0, 1, 0);
+		glRotatef(VAL(INDEX_MID_XROTATE) + index_tipXmidXrootX_angle, 1, 0, 0);
+
+		glTranslatef(0, 1.4, 0);
+		glRotatef(reflect * VAL(INDEX_TIP_ZROTATE), 0, 0, 1);
+		glRotatef(reflect * VAL(INDEX_TIP_YROTATE), 0, 1, 0);
+		glRotatef(VAL(INDEX_TIP_XROTATE) + index_tipXmidXrootX_angle, 1, 0, 0);
+
+		// Place spawnParticle() here if needed
+		spawnParticles(cameraTransform);
+	glPopMatrix();
 
 	// =====================================================================================================================
 	//	MIDDLE FINGER
 	// =====================================================================================================================
-		// Middle tip
+	// Middle tip
 	vector<Vec3f> middleTip;
-	middleTip.push_back(Vec3f(0, 0, 0));
-	middleTip.push_back(Vec3f(0, 0.5, 0));
-	middleTip.push_back(Vec3f(0, 1, 0));
+	glPushMatrix();
+		middleTip.push_back(Vec3f(0, 0, 0));
+		middleTip.push_back(Vec3f(0, 0.5, 0));
+		middleTip.push_back(Vec3f(0, 1, 0));
 
-	// Move self only
-	rotateVertices(VAL(MIDDLE_TIP_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &middleTip);
-	rotateVertices(reflect * VAL(MIDDLE_TIP_YROTATE), 0, 1, 0, &middleTip);
-	rotateVertices(reflect * VAL(MIDDLE_TIP_ZROTATE), 0, 0, 1, &middleTip);
-	translateVertices(0, 1.4, 0, &middleTip);
+		// Move self only
+		rotateVertices(VAL(MIDDLE_TIP_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &middleTip);
+		rotateVertices(reflect * VAL(MIDDLE_TIP_YROTATE), 0, 1, 0, &middleTip);
+		rotateVertices(reflect * VAL(MIDDLE_TIP_ZROTATE), 0, 0, 1, &middleTip);
+		translateVertices(0, 1.4, 0, &middleTip);
+
+		
 
 	// Middle mid
 	vector<Vec3f> middleMid;
-	middleMid.push_back(Vec3f(0, 0, 0));
-	middleMid.push_back(Vec3f(0, 0.5, 0));
-	middleMid.push_back(Vec3f(0, 1, 0));
+		middleMid.push_back(Vec3f(0, 0, 0));
+		middleMid.push_back(Vec3f(0, 0.5, 0));
+		middleMid.push_back(Vec3f(0, 1, 0));
 
-	// Also move children
-	for (int i = 0; i < middleTip.size(); ++i)	middleMid.push_back(middleTip.at(i));
-	rotateVertices(VAL(MIDDLE_MID_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &middleMid);
-	rotateVertices(reflect * VAL(MIDDLE_MID_YROTATE), 0, 1, 0, &middleMid);
-	rotateVertices(reflect * VAL(MIDDLE_MID_ZROTATE), 0, 0, 1, &middleMid);
-	translateVertices(0, 1.8, 0, &middleMid);
+		// Also move children
+		for (int i = 0; i < middleTip.size(); ++i)	middleMid.push_back(middleTip.at(i));
+		rotateVertices(VAL(MIDDLE_MID_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &middleMid);
+		rotateVertices(reflect * VAL(MIDDLE_MID_YROTATE), 0, 1, 0, &middleMid);
+		rotateVertices(reflect * VAL(MIDDLE_MID_ZROTATE), 0, 0, 1, &middleMid);
+		translateVertices(0, 1.8, 0, &middleMid);
 
 	// Middle root
 	vector<Vec3f> middleRoot;
-	middleRoot.push_back(Vec3f(0, 0, 0));
-	middleRoot.push_back(Vec3f(0, 0.5, 0));
-	middleRoot.push_back(Vec3f(0, 1, 0));
-	middleRoot.push_back(Vec3f(0, 1.5, 0));
+		middleRoot.push_back(Vec3f(0, 0, 0));
+		middleRoot.push_back(Vec3f(0, 0.5, 0));
+		middleRoot.push_back(Vec3f(0, 1, 0));
+		middleRoot.push_back(Vec3f(0, 1.5, 0));
 
-	// Also move children
-	for (int i = 0; i < middleMid.size(); ++i)	middleRoot.push_back(middleMid.at(i));
-	rotateVertices(VAL(MIDDLE_ROOT_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &middleRoot);
-	rotateVertices(reflect * VAL(MIDDLE_ROOT_YROTATE), 0, 1, 0, &middleRoot);
-	rotateVertices(reflect * VAL(MIDDLE_ROOT_ZROTATE), 0, 0, 1, &middleRoot);
-	translateVertices(0, 6.5, 0, &middleRoot);
+		// Also move children
+		for (int i = 0; i < middleMid.size(); ++i)	middleRoot.push_back(middleMid.at(i));
+		rotateVertices(VAL(MIDDLE_ROOT_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &middleRoot);
+		rotateVertices(reflect * VAL(MIDDLE_ROOT_YROTATE), 0, 1, 0, &middleRoot);
+		rotateVertices(reflect * VAL(MIDDLE_ROOT_ZROTATE), 0, 0, 1, &middleRoot);
+		translateVertices(0, 6.5, 0, &middleRoot);
+
+		// Mimick the transformations in OpenGL's modelview matrix to add support for particle system
+		glTranslatef(0, 6.5, 0);
+		glRotatef(reflect * VAL(MIDDLE_ROOT_ZROTATE), 0, 0, 1);
+		glRotatef(reflect * VAL(MIDDLE_ROOT_YROTATE), 0, 1, 0);
+		glRotatef(VAL(MIDDLE_ROOT_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0);
+
+		glTranslatef(0, 1.8, 0);
+		glRotatef(reflect * VAL(MIDDLE_MID_ZROTATE), 0, 0, 1);
+		glRotatef(reflect * VAL(MIDDLE_MID_YROTATE), 0, 1, 0);
+		glRotatef(VAL(MIDDLE_MID_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0);
+
+		glTranslatef(0, 1.4, 0);
+		glRotatef(reflect * VAL(MIDDLE_TIP_ZROTATE), 0, 0, 1);
+		glRotatef(reflect * VAL(MIDDLE_TIP_YROTATE), 0, 1, 0);
+		glRotatef(VAL(MIDDLE_TIP_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0);
+
+		// Place spawnParticle() here if needed
+	glPopMatrix();
 
 	// =====================================================================================================================
 	//	RING FINGER
 	// =====================================================================================================================
-		// Ring tip
+	// Ring tip
 	vector<Vec3f> ringTip;
-	ringTip.push_back(Vec3f(0, 0, 0));
-	ringTip.push_back(Vec3f(0, 0.5, 0));
-	ringTip.push_back(Vec3f(0, 1, 0));
+	glPushMatrix();
+		ringTip.push_back(Vec3f(0, 0, 0));
+		ringTip.push_back(Vec3f(0, 0.5, 0));
+		ringTip.push_back(Vec3f(0, 1, 0));
 
-	// Move self only
-	rotateVertices(VAL(RING_TIP_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &ringTip);
-	rotateVertices(reflect * VAL(RING_TIP_YROTATE), 0, 1, 0, &ringTip);
-	rotateVertices(reflect * VAL(RING_TIP_ZROTATE), 0, 0, 1, &ringTip);
-	translateVertices(0, 1.4, 0, &ringTip);
+		// Move self only
+		rotateVertices(VAL(RING_TIP_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &ringTip);
+		rotateVertices(reflect * VAL(RING_TIP_YROTATE), 0, 1, 0, &ringTip);
+		rotateVertices(reflect * VAL(RING_TIP_ZROTATE), 0, 0, 1, &ringTip);
+		translateVertices(0, 1.4, 0, &ringTip);
 
 	// Ring mid
 	vector<Vec3f> ringMid;
-	ringMid.push_back(Vec3f(0, 0, 0));
-	ringMid.push_back(Vec3f(0, 0.5, 0));
-	ringMid.push_back(Vec3f(0, 1, 0));
+		ringMid.push_back(Vec3f(0, 0, 0));
+		ringMid.push_back(Vec3f(0, 0.5, 0));
+		ringMid.push_back(Vec3f(0, 1, 0));
 
-	// Also move children
-	for (int i = 0; i < ringTip.size(); ++i)	ringMid.push_back(ringTip.at(i));
-	rotateVertices(VAL(RING_MID_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &ringMid);
-	rotateVertices(reflect * VAL(RING_MID_YROTATE), 0, 1, 0, &ringMid);
-	rotateVertices(reflect * VAL(RING_MID_ZROTATE), 0, 0, 1, &ringMid);
-	translateVertices(0, 1.4, 0, &ringMid);
+		// Also move children
+		for (int i = 0; i < ringTip.size(); ++i)	ringMid.push_back(ringTip.at(i));
+		rotateVertices(VAL(RING_MID_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &ringMid);
+		rotateVertices(reflect * VAL(RING_MID_YROTATE), 0, 1, 0, &ringMid);
+		rotateVertices(reflect * VAL(RING_MID_ZROTATE), 0, 0, 1, &ringMid);
+		translateVertices(0, 1.4, 0, &ringMid);
 
 	// Ring root
-	vector<Vec3f> ringRoot;
-	ringRoot.push_back(Vec3f(0, 0, 0));
-	ringRoot.push_back(Vec3f(0, 0.5, 0));
-	ringRoot.push_back(Vec3f(0, 1, 0));
+		vector<Vec3f> ringRoot;
+		ringRoot.push_back(Vec3f(0, 0, 0));
+		ringRoot.push_back(Vec3f(0, 0.5, 0));
+		ringRoot.push_back(Vec3f(0, 1, 0));
 
-	// Also move children
-	for (int i = 0; i < ringMid.size(); ++i)	ringRoot.push_back(ringMid.at(i));
-	rotateVertices(reflect * -22.5, 0, 0, 1, &ringRoot);
-	rotateVertices(VAL(RING_ROOT_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &ringRoot);
-	rotateVertices(reflect * VAL(RING_ROOT_YROTATE), 0, 1, 0, &ringRoot);
-	rotateVertices(reflect * VAL(RING_ROOT_ZROTATE), 0, 0, 1, &ringRoot);
-	translateVertices(reflect * 1.25, 6, 0, &ringRoot);
+		// Also move children
+		for (int i = 0; i < ringMid.size(); ++i)	ringRoot.push_back(ringMid.at(i));
+		rotateVertices(reflect * -22.5, 0, 0, 1, &ringRoot);
+		rotateVertices(VAL(RING_ROOT_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &ringRoot);
+		rotateVertices(reflect * VAL(RING_ROOT_YROTATE), 0, 1, 0, &ringRoot);
+		rotateVertices(reflect * VAL(RING_ROOT_ZROTATE), 0, 0, 1, &ringRoot);
+		translateVertices(reflect * 1.25, 6, 0, &ringRoot);
+
+		// Mimick the transformations in OpenGL's modelview matrix to add support for particle system
+		glTranslatef(reflect * 1.25, 6, 0);
+		glRotatef(reflect * VAL(RING_ROOT_ZROTATE), 0, 0, 1);
+		glRotatef(reflect * VAL(RING_ROOT_YROTATE), 0, 1, 0);
+		glRotatef(VAL(RING_ROOT_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0);
+		glRotatef(reflect * -22.5, 0, 0, 1);
+
+		glTranslatef(0, 1.4, 0);
+		glRotatef(reflect * VAL(RING_MID_ZROTATE), 0, 0, 1);
+		glRotatef(reflect * VAL(RING_MID_YROTATE), 0, 1, 0);
+		glRotatef(VAL(RING_MID_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0);
+
+		glTranslatef(0, 1.4, 0);
+		glRotatef(reflect * VAL(RING_TIP_ZROTATE), 0, 0, 1);
+		glRotatef(reflect * VAL(RING_TIP_YROTATE), 0, 1, 0);
+		glRotatef(VAL(RING_TIP_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0);
+
+		// Place spawnParticle() here if needed
+	glPopMatrix();
 
 	// =====================================================================================================================
 	//	LITTLE FINGER
 	// =====================================================================================================================
-		// Little tip
+	// Little tip
 	vector<Vec3f> littleTip;
-	littleTip.push_back(Vec3f(0, 0, 0));
-	littleTip.push_back(Vec3f(0, 0.5, 0));
+	glPushMatrix();
+		littleTip.push_back(Vec3f(0, 0, 0));
+		littleTip.push_back(Vec3f(0, 0.5, 0));
 
-	// Move self only
-	rotateVertices(VAL(LITTLE_TIP_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &littleTip);
-	rotateVertices(reflect * VAL(LITTLE_TIP_YROTATE), 0, 1, 0, &littleTip);
-	rotateVertices(reflect * VAL(LITTLE_TIP_ZROTATE), 0, 0, 1, &littleTip);
-	translateVertices(0, 1, 0, &littleTip);
+		// Move self only
+		rotateVertices(VAL(LITTLE_TIP_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &littleTip);
+		rotateVertices(reflect * VAL(LITTLE_TIP_YROTATE), 0, 1, 0, &littleTip);
+		rotateVertices(reflect * VAL(LITTLE_TIP_ZROTATE), 0, 0, 1, &littleTip);
+		translateVertices(0, 1, 0, &littleTip);
 
 	// Little mid
 	vector<Vec3f> littleMid;
-	littleMid.push_back(Vec3f(0, 0, 0));
-	littleMid.push_back(Vec3f(0, 0.5, 0));
+		littleMid.push_back(Vec3f(0, 0, 0));
+		littleMid.push_back(Vec3f(0, 0.5, 0));
 
-	// Also move children
-	for (int i = 0; i < littleTip.size(); ++i)	littleMid.push_back(littleTip.at(i));
-	rotateVertices(VAL(LITTLE_MID_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &littleMid);
-	rotateVertices(reflect * VAL(LITTLE_MID_YROTATE), 0, 1, 0, &littleMid);
-	rotateVertices(reflect * VAL(LITTLE_MID_ZROTATE), 0, 0, 1, &littleMid);
-	translateVertices(0, 1, 0, &littleMid);
+		// Also move children
+		for (int i = 0; i < littleTip.size(); ++i)	littleMid.push_back(littleTip.at(i));
+		rotateVertices(VAL(LITTLE_MID_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &littleMid);
+		rotateVertices(reflect * VAL(LITTLE_MID_YROTATE), 0, 1, 0, &littleMid);
+		rotateVertices(reflect * VAL(LITTLE_MID_ZROTATE), 0, 0, 1, &littleMid);
+		translateVertices(0, 1, 0, &littleMid);
 
 	// Little root
 	vector<Vec3f> littleRoot;
-	littleRoot.push_back(Vec3f(0, 0, 0));
-	littleRoot.push_back(Vec3f(0, 0.5, 0));
+		littleRoot.push_back(Vec3f(0, 0, 0));
+		littleRoot.push_back(Vec3f(0, 0.5, 0));
 
-	// Also move children
-	for (int i = 0; i < littleMid.size(); ++i)	littleRoot.push_back(littleMid.at(i));
-	rotateVertices(reflect * -45, 0, 0, 1, &littleRoot);
-	rotateVertices(VAL(LITTLE_ROOT_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &littleRoot);
-	rotateVertices(reflect * VAL(LITTLE_ROOT_YROTATE), 0, 1, 0, &littleRoot);
-	rotateVertices(reflect * VAL(LITTLE_ROOT_ZROTATE), 0, 0, 1, &littleRoot);
-	translateVertices(reflect * 2.5, 5, 0, &littleRoot);
+		// Also move children
+		for (int i = 0; i < littleMid.size(); ++i)	littleRoot.push_back(littleMid.at(i));
+		rotateVertices(reflect * -45, 0, 0, 1, &littleRoot);
+		rotateVertices(VAL(LITTLE_ROOT_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0, &littleRoot);
+		rotateVertices(reflect * VAL(LITTLE_ROOT_YROTATE), 0, 1, 0, &littleRoot);
+		rotateVertices(reflect * VAL(LITTLE_ROOT_ZROTATE), 0, 0, 1, &littleRoot);
+		translateVertices(reflect * 2.5, 5, 0, &littleRoot);
+
+		// Mimick the transformations in OpenGL's modelview matrix to add support for particle system
+		glTranslatef(reflect * 2.5, 5, 0);
+		glRotatef(reflect * VAL(LITTLE_ROOT_ZROTATE), 0, 0, 1);
+		glRotatef(reflect * VAL(LITTLE_ROOT_YROTATE), 0, 1, 0);
+		glRotatef(VAL(LITTLE_ROOT_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0);
+		glRotatef(reflect * -45, 0, 0, 1);
+
+		glTranslatef(0, 1, 0);
+		glRotatef(reflect * VAL(LITTLE_MID_ZROTATE), 0, 0, 1);
+		glRotatef(reflect * VAL(LITTLE_MID_YROTATE), 0, 1, 0);
+		glRotatef(VAL(LITTLE_MID_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0);
+
+		glTranslatef(0, 1, 0);
+		glRotatef(reflect * VAL(LITTLE_TIP_ZROTATE), 0, 0, 1);
+		glRotatef(reflect * VAL(LITTLE_TIP_YROTATE), 0, 1, 0);
+		glRotatef(VAL(LITTLE_TIP_XROTATE) + rest_tipXmidXrootX_angle, 1, 0, 0);
+
+		// Place spawnParticle() here if needed
+	glPopMatrix();
 
 	// =====================================================================================================================
 	//	PALM
@@ -543,30 +679,24 @@ void HandModel::draw()
 
 	// Draw metaballs
 
-	glPushMatrix();
-
-
-	glTranslated(VAL(XPOS), VAL(YPOS), VAL(ZPOS));
-	glRotated(VAL(XROTATE), 1, 0, 0);
-	glRotated(VAL(YROTATE), 0, 1, 0);
-	glRotated(VAL(ZROTATE), 0, 0, 1);
+	
 
 	// Draw spheres representing the light sources
 	if (VAL(LIGHT0_MARKER)) {
 		glPushMatrix();
-		glTranslated(light0Pos[0], light0Pos[1], light0Pos[2]);
-		setAmbientColor(1, 1, 1);
-		setDiffuseColor(1, 1, 1);
-		drawSphere(0.25);
+			glTranslated(light0Pos[0], light0Pos[1], light0Pos[2]);
+			setAmbientColor(1, 1, 1);
+			setDiffuseColor(1, 1, 1);
+			drawSphere(0.25);
 		glPopMatrix();
 	}
 
 	if (VAL(LIGHT1_MARKER)) {
 		glPushMatrix();
-		glTranslated(light1Pos[0], light1Pos[1], light1Pos[2]);
-		setAmbientColor(1, 1, 1);
-		setDiffuseColor(1, 1, 1);
-		drawSphere(0.25);
+			glTranslated(light1Pos[0], light1Pos[1], light1Pos[2]);
+			setAmbientColor(1, 1, 1);
+			setDiffuseColor(1, 1, 1);
+			drawSphere(0.25);
 		glPopMatrix();
 	}
 
@@ -723,6 +853,7 @@ int main()
 	controls[LITTLE_ROOT_YROTATE] = ModelerControl("Little Finger Root Y Rotation", -90, 90, 1, 0);
 	controls[LITTLE_ROOT_ZROTATE] = ModelerControl("Little Finger Root Z Rotation", -90, 90, 1, 0);
 
+	ModelerApplication::Instance()->SetParticleSystem(new ParticleSystem());
 	ModelerApplication::Instance()->Init(&createHandModel, controls, NUMCONTROLS);
 	return ModelerApplication::Instance()->Run();
 }
