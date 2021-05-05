@@ -111,6 +111,9 @@
     <ClCompile Include="catmullromcurveevaluator.cpp">
       <Filter>Source Files\Curves</Filter>
     </ClCompile>
+    <ClCompile Include="c2interpolatingcurveevaluator.cpp">
+      <Filter>Source Files\Curves</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="curve.h">
@@ -191,6 +194,12 @@
     <ClInclude Include="catmullromcurveevaluator.h">
       <Filter>Header Files\Curves.</Filter>
     </ClInclude>
+    <ClInclude Include="Matrix.h">
+      <Filter>Header Files\Math.</Filter>
+    </ClInclude>
+    <ClInclude Include="c2interpolatingcurveevaluator.h">
+      <Filter>Header Files\Curves.</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cleanskel.pl">
@@ -201,6 +210,9 @@
     </None>
     <None Include="skelrenamer.pl">
       <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Matrix.tpp">
+      <Filter>Header Files\Math.</Filter>
     </None>
   </ItemGroup>
 </Project>
