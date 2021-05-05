@@ -37,6 +37,8 @@ public:
 	void animate(bool bAnimate);
 	int fps();
 	void fps(int fps);
+	float getTension();
+	void setTension(float t);
 	bool simulate() const;
 	void simulate(bool bSimulate);
 	void redrawModelerView();
@@ -61,6 +63,7 @@ private:
 	bool m_bSaveMovie;
 	int m_iFps;
 	float m_fPlayStartTime, m_fPlayEndTime;
+	float tension;
 	std::string m_strMovieFileName;
 	int m_iMovieFrameNum;
 
@@ -92,6 +95,8 @@ private:
 	static void cb_poor(Fl_Menu_*, void*);
 	inline void cb_aniLen_i(Fl_Menu_*, void*);
 	static void cb_aniLen(Fl_Menu_*, void*);
+	inline void cb_tension_i(Fl_Menu_*, void*);
+	static void cb_tension(Fl_Menu_* o, void* v);
 	inline void cb_fps_i(Fl_Slider*, void*);
 	static void cb_fps(Fl_Slider*, void*);
 	inline void cb_m_modelerWindow_i(Fl_Window*, void*);
