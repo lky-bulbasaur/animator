@@ -6,8 +6,8 @@
 #include "modelerdraw.h"
 #include <FL/gl.h>
 #include <vector>
-
 #include "ThreadPool.h"
+
 // #include "vec.h"
 #include "mat.h"
 #include "marchingcubesconst.h"
