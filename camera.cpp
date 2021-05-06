@@ -19,6 +19,7 @@ const float kMouseRotationSensitivity		= 1.0f/90.0f;
 const float kMouseTranslationXSensitivity	= 0.03f;
 const float kMouseTranslationYSensitivity	= 0.03f;
 const float kMouseZoomSensitivity			= 0.08f;
+const float kMouseTwistSensitivity			= 0.03f;
 
 void MakeDiagonal(Mat4f &m, float k)
 {
@@ -123,15 +124,37 @@ void Camera::calculateViewingTransformParameters()
 	MakeHRotX(elevXform, mElevation);
 	MakeDiagonal(twistXform, 1.0f);
 	MakeHTrans(originXform, mLookAt);
-	
+
+	// https://handwiki.org/wiki/Conversion_between_quaternions_and_Euler_angles
+
+	double cy = cos(0);
+	double sy = sin(0);
+	double cp = cos(mAzimuth * 0.5);
+	double sp = sin(mAzimuth * 0.5);
+	double cr = cos(mElevation * 0.5);
+	double sr = sin(mElevation * 0.5);
+
+	float qw = cr * cp * cy + sr * sp * sy;
+	float qx = sr * cp * cy - cr * sp * sy;
+	float qy = cr * sp * cy + sr * cp * sy;
+	float qz = cr * cp * sy - sr * sp * cy;
+
+	Mat4f quaternionform = Mat4f{
+		qw * qw + qx * qx - qy * qy - qz * qz, 2 * (qx * qy - qw * qz), 2 * (qw * qy + qx * qz), 0.0,
+		2 * (qx * qy + qw * qz), qw * qw - qx * qx + qy * qy - qz * qz, 2 * (qy * qz - qw * qx), 0.0,
+		2 * (qx * qz - qw * qy), 2 * (qw * qx + qy * qz), qw * qw - qx * qx - qy * qy + qz * qz, 0.0,
+		0.0, 0.0, 0.0, 1.0
+	};
+
 	mPosition = Vec3f(0,0,0);
 
-	mPosition = originXform * (azimXform * (elevXform * (dollyXform * mPosition)));
+	//mPosition = originXform * (azimXform * (elevXform * (dollyXform * mPosition)));
+	mPosition = originXform * (quaternionform * (dollyXform * mPosition));
 
 	if ( fmod(double(mElevation), 2.0*M_PI) < -M_PI/2 || fmod(double(mElevation), 2.0*M_PI) > M_PI/2 )
-		mUpVector= Vec3f(0,-1,0);
+		mUpVector= Vec3f(sin(mTwist),-cos(mTwist),0);
 	else
-		mUpVector= Vec3f(0,1,0);
+		mUpVector= Vec3f(sin(mTwist),cos(mTwist),0);
 
 	mDirtyTransform = false;
 }
@@ -235,7 +258,11 @@ void Camera::dragMouse( int x, int y )
 			break;
 		}
 	case kActionTwist:
-		// Not implemented
+		{
+			float dTwist = -mouseDelta[0] * kMouseTwistSensitivity;
+			setTwist(getTwist() + dTwist);
+			break;
+		}
 	default:
 		break;
 	}
