@@ -43,6 +43,10 @@ int ModelerView::handle(int event)
 			switch(eventButton)
 			{
 			case kMouseRotationButton:
+				if (Fl::event_state(FL_CTRL)) {
+					m_camera->clickMouse(kActionTwist, eventCoordX, eventCoordY);
+					break;
+				} // CTRL + LEFT = TWIST
 				if (!Fl::event_state(FL_ALT)) {
 					m_camera->clickMouse(kActionRotate, eventCoordX, eventCoordY );
 					break;
