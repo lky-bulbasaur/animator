@@ -1,5 +1,5 @@
 TENSION CONTROL
 - Can be found under "Animation" tab
 
-TWIST FUNCTION
+QUATERNIONS FOR TWIST CONTROL
 - Please use Ctrl+LeftMouseClick
