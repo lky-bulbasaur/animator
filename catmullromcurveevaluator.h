@@ -14,6 +14,10 @@ public:
 		std::vector<Point>& ptvEvaluatedCurvePts,
 		const float& fAniLength,
 		const bool& bWrap) const;
+	void setTension(float t);
+
+private:
+	float tension = 0.5;
 };
 
 #endif

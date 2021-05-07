@@ -58,7 +58,7 @@ void CatmullromCurveEvaluator::evaluateCurve(const std::vector<Point>& ptvCtrlPt
 		2,	-5,	4,	-1,
 		-1,	0,	1,	0,
 		0,	2,	0,	0
-		) / 2.0;
+		) * tension;
 
 	// See "Displaying B-splines" in "Curve Details"
 	// Catmull-rom curve is like a special case of B-spline so many code from B-spline implementation will be reused
@@ -96,4 +96,9 @@ void CatmullromCurveEvaluator::evaluateCurve(const std::vector<Point>& ptvCtrlPt
 		ptvEvaluatedCurvePts.push_back(Point(fAniLength, ctrlPts[iCtrlPtCount - 1].y));
 	}
 
+}
+
+void CatmullromCurveEvaluator::setTension(float t)
+{
+	tension = t;
 }

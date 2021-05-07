@@ -25,6 +25,7 @@
 
 #include "modelerui.h"
 #include "camera.h"
+#include "catmullromcurveevaluator.h"
 
 using namespace std;
 
@@ -239,6 +240,25 @@ inline void ModelerUI::cb_aniLen_i(Fl_Menu_*, void*)
 void ModelerUI::cb_aniLen(Fl_Menu_* o, void* v) 
 {
 	((ModelerUI*)(o->parent()->user_data()))->cb_aniLen_i(o,v);
+}
+
+inline void ModelerUI::cb_tension_i(Fl_Menu_*, void*)
+{
+	float tension;
+	const char* szTension = NULL;
+	do {
+		szTension = fl_input("New Catmull-Rom curve tension (> 0.0)", "0.5");
+
+		if (szTension) {
+			tension = atof(szTension);
+			setTension((float)tension);
+		}
+	} while (szTension && (tension <= 0.0));
+}
+
+void ModelerUI::cb_tension(Fl_Menu_* o, void* v)
+{
+	((ModelerUI*)(o->parent()->user_data()))->cb_tension_i(o, v);
 }
 
 inline void ModelerUI::cb_fps_i(Fl_Slider*, void*) 
@@ -867,6 +887,17 @@ void ModelerUI::fps(const int iFps)
 	m_iFps = iFps;
 }
 
+float ModelerUI::getTension()
+{
+	return tension;
+}
+
+void ModelerUI::setTension(float t)
+{
+	tension = t;
+	((CatmullromCurveEvaluator*)(m_pwndGraphWidget->getCurveEvaluator(CURVE_TYPE_CATMULLROM)))->setTension(tension);
+}
+
 ModelerUI::ModelerUI() : 
 m_iCurrControlCount(0), 
 m_pcbfValueChangedCallback(NULL),
@@ -874,6 +905,7 @@ m_iFps(30),
 m_bAnimating(false),
 m_bSaveMovie(false)
 {
+	tension = 0.5;
 	// setup all the callback functions...
 	m_pmiOpenAniScript->callback((Fl_Callback*)cb_openAniScript);
 	m_pmiSaveAniScript->callback((Fl_Callback*)cb_saveAniScript);
@@ -888,6 +920,7 @@ m_bSaveMovie(false)
 	m_pmiLowQuality->callback((Fl_Callback*)cb_low);
 	m_pmiPoorQuality->callback((Fl_Callback*)cb_poor);
 	m_pmiSetAniLen->callback((Fl_Callback*)cb_aniLen);
+	m_pmiSetTension->callback((Fl_Callback*)cb_tension);
 	m_pbrsBrowser->callback((Fl_Callback*)cb_browser);
 	m_ptabTab->callback((Fl_Callback*)cb_tab);
 	m_pwndGraphWidget->callback((Fl_Callback*)cb_graphWidget);

@@ -140,6 +140,11 @@ GraphWidget::~GraphWidget()
 	delete[] m_ppceCurveEvaluators;
 }
 
+CurveEvaluator* GraphWidget::getCurveEvaluator(int i)
+{
+	return m_ppceCurveEvaluators[i];
+}
+
 int GraphWidget::addCurve(const float fStartVal, const float fMinY, const float fMaxY)
 {
 	Curve* pcrv = new Curve(m_fEndTime, fStartVal);
